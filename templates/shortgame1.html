@@ -1,0 +1,833 @@
+{% import 'macros.html' as macro %}
+{% extends 'gamebase.html' %}
+{% block content %}
+<style>
+  body {
+      margin: 0;
+      overflow: hidden; /* Prevent scrolling on mobile */
+  }
+  canvas {
+      display: block;
+      margin: auto; /* Center the canvas */
+      border: 2px solid black; /* Optional border for visualization */
+  }
+</style>
+<div class="round-num">
+  <h3>Round <span id ="cround">1</span></h3>
+</div>
+<div class="row pop-up">
+  <div class="box small-6 large-centered">
+    <div class="row">
+      <div class="col">
+        <h3>Burst the myth!</h3>
+      </div>
+      <div class="col-auto">
+        <button type="button" class="close modal__button-link" data-dismiss="modal" aria-label="Close" style="border-color: transparent;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </div>
+    <p>Round 1</p>
+    <p>Select the bubble containing the myth. </p>
+    <p>Press enter or click to continue</p>
+  </div>
+</div>
+
+<div class="row generic-popup d-none" >
+  <div class="box small-6 large-centered">
+    <div class="row">
+      <div class="col">
+        <h3 id="title"></h3>
+      </div>
+      <div class="col-auto">
+        <button type="button" class="close modal__button-link" data-bs-dismiss="modal" aria-label="Close" style="border-color: transparent;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </div>
+    <p id="message"></p>
+    <p>Press enter or click to continue.</p>
+  </div>
+</div>
+
+<!-- <div class="row correct-ans-popup d-none" >
+  <div class="box small-6 large-centered">
+    <div class="row">
+      <div class="col">
+        <h3>Oops!That was not right.</h3>
+      </div>
+      <div class="col-auto">
+        <button type="button" class="close modal__button-link" data-bs-dismiss="modal" aria-label="Close" style="border-color: transparent;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </div>
+    <p class="correctAns"></p>
+    <p>Press enter or click to continue.</p>
+  </div>
+</div>
+<div class="row correct-ans-explain d-none">
+  <div class="box small-6 large-centered">
+    <div class="row">
+      <div class="col">
+        <h3>Correct!</h3>
+      </div>
+      <div class="col-auto">
+        <button type="button" class="close modal__button-link" data-bs-dismiss=".correct-ans-explain" aria-label="Close" style="border-color: transparent;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </div>
+    <p class="correctAnsExplain"></p>
+  </div>
+</div>
+<div class="row timeup-popup d-none">
+  <div class="box small-6 large-centered">
+    <div class="row">
+      <div class="col">
+        <h3>Time's up!</h3>
+      </div>
+      <div class="col-auto">
+        <button type="button" class="close modal__button-link" data-bs-dismiss="modal" aria-label="Close" style="border-color: transparent;">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    </div>
+    <p>The correct answer(s) were:</p>
+    <p class="timeUpcorrectAns"></p>
+    <p>Don't worry , make sure to burst these myths later on!</p>
+    <p>If you would like read about disabilities and accessibility <a href="\templates\learn1.html">click here</a></p>
+    <p>Press any key or click to move to the next round!</p>
+  </div>
+</div>-->
+<!-- <div class="row next-round-popup d-none" style="--bs-gutter-x:0rem;">
+  <div class="box small-6 large-centered">
+    <h3>Round <span id="round-num" ></span></h3>
+  </div>  
+</div> -->
+<div class="row won-game-popup d-none" style="--bs-gutter-x:0rem;"> 
+  <div class="box small-6 large-centered">
+    <h3>Congratulations!</h3>
+    <p>You have successfully burst all the myths!</p>
+    <p>Download the facts and myths about accessibility from here.</p>
+    <a href="/static/myths.txt" download="myths">Myths</a>
+    <a href="/static/facts.txt" download="facts">Facts</a>
+    <br>
+    <button type="button" class="btn text-center primary-font px-4" ><a href="/puzzle_home"style="color:#9149e5;">Short games menu</a></button>
+  </div>
+</div> 
+
+{% endblock %}
+{% block scripts %}
+<script>
+  // let canvasWidth, canvasHeight;
+  $(document).ready(function(){
+    document.getElementById("defaultCanvas0").addEventListener("focus", canvasFocus);
+    document.getElementById("defaultCanvas0").addEventListener("blur", canvasBlur);
+  });
+  const aspectRatio = 16 / 9;
+  let bubs = []; // an empty array
+  let score = 0;
+  let gapX = -500;
+  let gapY = -200;
+  let xcoord = [gapX, gapX + 200, gapX + 400, gapX + 600, gapX + 800];
+  let ycoord = [gapY, gapY + 200, gapY + 400, gapY + 600, gapY + 800];
+  let myths = [];
+  let justifications = [];
+  let facts = [];
+  let explanations = [];
+  let mixed = [];
+  let correctAnswers = [];
+  let mythCount = 0;
+  let mythLim = 3;
+  let bubbleCount = 5;
+  let rounds = 3;
+  let current_round = 1;
+  var timerValue = 60;
+  let mythCounter = 0;
+  let restartRound = 0;
+  let bubbleTexture;
+  let font;
+  let rotateA = 0;
+  let mp = false;
+  let gamePaused = false;
+  let setNewRound = false;
+  // keyboard accessibility
+  let selectedBubbleIndex = -1;
+  let replay = 0;
+
+
+  function preload() {
+    bubbleTexture = loadImage('static/images/bubblebg2.png'); // Load the bubble texture image
+    bubbleTexCorrect = loadImage('static/images/download.png');
+    font = loadFont("static/Inconsolata.otf");
+  }
+  function canvasFocus() {
+    // Add visual highlighting when canvas is focused
+    document.getElementById("myCanvas").style.border = "2px solid blue";
+}
+function canvasBlur() {
+    // Remove visual highlighting when canvas loses focus
+    document.getElementById("myCanvas").style.border = "none";
+}
+  function setup() {
+    // if (windowWidth < windowHeight * aspectRatio) {
+    //             displayWidth = windowWidth;
+    //             displayHeight = windowWidth / aspectRatio;
+    //         } else {
+    //           displayWidth = windowHeight * aspectRatio;
+    //           displayHeight = windowHeight;
+    //         }
+    if (windowWidth < windowHeight) {
+    createCanvas(windowWidth, windowHeight, WEBGL); // mobile screen
+    txt = createDiv('');
+    txt.style('font-size', '16px');
+  } else {
+    createCanvas(windowHeight * aspectRatio, windowHeight, WEBGL); // big screen
+  }
+    createCanvas(displayWidth, displayHeight, WEBGL);
+    $("#defaultCanvas0").attr("tabindex", "0");
+    document.getElementById("defaultCanvas0").addEventListener("focus", canvasFocus);
+    document.getElementById("defaultCanvas0").addEventListener("blur", canvasBlur);
+    soundFormats('mp3', 'ogg');
+    success = loadSound('static/sounds/pop.mp3');
+    fail = loadSound('static/sounds/game-fail.mp3');
+    next = loadSound('static/sounds/game-success.mp3');
+    won = loadSound('static/sounds/trumpets.mp3')
+    background(255);
+    textFont(font);
+    document.addEventListener('keydown', startGame);
+    document.addEventListener('mousedown', startGame);
+  }
+
+
+
+  function startGame() {
+    $('.pop-up').toggleClass("d-none");
+    // Remove event listeners
+    // console.log('setNewRound', setNewRound)
+
+    // Mouse down override to prevent default browser controls from appearing
+    // .mousedown(function(){ $(this).focus(); return false; }) 
+    // .keydown(function(){ /* ... game logic ... */ return false; });
+    document.removeEventListener('keydown', startGame);
+    document.removeEventListener('mousedown', startGame);
+    // Hide instructions
+    // instructionsVisible = false;
+
+    // Fetch myths and create bubbles once the data is fetched
+    Promise.all([fetchMyths(), fetchFacts()]).then(() => {
+      createBubbles();
+      setInterval(timeIt, 1000);
+    });
+  }
+
+  function endGame(){
+    won.play();
+    // console.log('in won game');
+    // $('.won-game-popup').toggleClass("d-none");
+    $('#title').text('Congratulations!');
+    $("#message").text('You have successfully burst all the myths!');
+    $('.won-game-popup').toggleClass("d-none");
+
+    
+    setTimeout(function() {
+        $('.won-game-popup').addClass("d-none");
+        gamePaused = 0;
+    }, 60000);
+    // gamePaused = 1;
+  }
+
+  function nextRound(){
+    current_round++;
+    // console.log('next round func in');
+    $('#cround').text(current_round);
+    // $('.generic-popup').toggleClass("d-none");
+    document.removeEventListener('keydown', nextRound);
+    document.removeEventListener('mousedown', nextRound);
+    next.play();
+    // createBubbles();
+    gamePaused = 1;
+    timerValue = 60;
+    // xcoord.push(xcoord[xcoord.length - 1] + 400);
+    // bubbleCount++;
+    
+    setNewRound = false;
+    // setInterval(timeIt, 1000);
+    bubs=[]
+    if (mythCounter <21)
+    {
+    createBubbles();
+    }
+    setTimeout(function() {
+        $('.generic-popup').addClass("d-none");
+        gamePaused = 0;
+    }, 3000);
+    
+  }
+
+  function fetchMyths() {
+    return new Promise((resolve, reject) => {
+      fetch('static/myths.txt')
+        .then(response => response.text())
+        .then(data => {
+          // Split the text into an array of myths
+          // myths = data.split('\n');
+          const lines = data.split('\n');
+          lines.forEach(line => {
+          const [myth, justification] = line.split('|').map(item => item.trim());
+          // Add myth and justification to their respective arrays
+          myths.push(myth);
+          justifications.push(justification);
+        });
+        // Resolve the promise with both arrays
+        resolve({ myths, justifications });
+          // resolve();
+        })
+        .catch(error => {
+          console.error('Error fetching myths:', error);
+          reject(error);
+        });
+    });
+  }
+
+  function fetchFacts() {
+    return new Promise((resolve, reject) => {
+      fetch('static/facts.txt')
+        .then(response => response.text())
+        .then(data => {
+          const lines = data.split('\n');
+          lines.forEach(line => {
+          const [fact, explanation] = line.split('|').map(item => item.trim());
+          // Add myth and justification to their respective arrays
+          facts.push(fact);
+          explanations.push(explanation);
+        });
+        // Resolve the promise with both arrays
+        resolve({ facts, explanations });
+        })
+        .catch(error => {
+          console.error('Error fetching facts:', error);
+          reject(error);
+        });
+    });
+  }
+// Function to create bubbles
+function createBubbles() {
+  if (windowWidth > windowHeight) {
+    let availableX = xcoord.slice();
+    for (let i = 0; i < bubbleCount; i++) {
+      let randomIndex = Math.floor(Math.random() * availableX.length);
+      // let x = xcoord[i];
+      // Select the x-coordinate at the randomIndex
+      let x = availableX[randomIndex];
+      
+      // Remove the selected x-coordinate from availableX
+      availableX.splice(randomIndex, 1);
+      let y = random(10, 500);
+      let sz = 150;
+      let col = color(random(255), random(255), random(255));
+      let b;
+      if (mythCount < mythLim) {
+        b = new Bubble(x, y, sz, col, 'myth'); // make a new bubble
+        mythCount++;
+      } else {
+        b = new Bubble(x, y, sz, col, 'fact');
+      }
+      bubs.push(b); // add it to the array
+    }
+  }
+  else{
+    let availableY = ycoord.slice();
+    for (let i = 0; i < bubbleCount; i++) {
+      let randomIndex = Math.floor(Math.random() * availableY.length);
+      // let x = xcoord[i];
+      // Select the x-coordinate at the randomIndex
+      let y = availableY[randomIndex];
+      
+      // Remove the selected x-coordinate from availableX
+      availableY.splice(randomIndex, 1);
+      let x = random(5, 10);
+      let sz = 150;
+      let col = color(random(255), random(255), random(255));
+      let b;
+      if (mythCount < mythLim) {
+        b = new Bubble(x, y, sz, col, 'myth'); // make a new bubble
+        mythCount++;
+      } else {
+        b = new Bubble(x, y, sz, col, 'fact');
+      }
+      bubs.push(b); // add it to the array
+    }
+
+  }
+    // console.log('bubs',bubs);
+}
+
+  function draw() {
+    background(255);
+
+    var timerX = (width / 2) - 200;
+    var timerY = (-1 * height / 2) + 250;
+    var timerTextY = (-1 * height / 2) + 200;
+    var timerTextX = (width / 2) - 200;
+    var scoreTextX = (-1 * width / 2) + 100;
+    var scoreTextY = (-1 * height / 2) + 200;
+    var scoreX=(-1 * width / 2) + 100;
+    var scoreY = (-1 * height / 2) + 250;
+    if (windowWidth > windowHeight) {
+      textSize(40);
+    }
+    else{
+      textSize(20);
+      timerX = (width / 2) - 100;
+      timerY = (-1 * height / 2) + 100;
+      timerTextY = (-1 * height / 2) + 100;
+      timerTextX = (width / 2) -150;
+      scoreTextX = (-1 * width / 2) + 50;
+      scoreTextY = (-1 * height / 2) + 100;
+      scoreX = (-1 * width / 2) + 100;
+      scoreY = (-1 * height / 2) + 100;
+    }
+    text("Timer",timerTextX,timerTextY);
+    if (timerValue >= 10) {
+      text("0:" + timerValue, timerX,timerY );
+    }
+    if (timerValue < 10) {
+      text('0:0' + timerValue,timerX,timerY);
+    }
+    if (timerValue == 0) {
+      timerValue++;
+      // console.log('in times up');
+      text('Time up!', timerX, timerY);
+      gamePaused = true;
+      $('.generic-popup').removeClass("d-none");
+      $('#title').text('Time up!');
+      $('#message').text(correctAnswers);
+            function hidePopup() {
+              // Hide the popup
+              $('.generic-popup').addClass('d-none');
+              gamePaused = false; // Resume the game
+            }
+            
+            // Set a timeout to hide the popup after 10 seconds
+            // const popupTimeout = setTimeout(hidePopup, 10000);
+            const mousedownHandler = () => {
+            // Clear the timeout
+            // clearTimeout(popupTimeout);
+            // Hide the popup
+            hidePopup();
+            correctAnswers.splice(0, correctAnswers.length);
+            mythCount = 0;
+            if (mythCounter < 21)
+            {
+            nextRound();
+            }
+            else{
+              endGame();
+          }
+
+            // Remove the event listener
+            document.removeEventListener('mousedown', mousedownHandler);
+        };
+        // Add event listener
+        document.addEventListener('mousedown', mousedownHandler);
+
+            // document.addEventListener('keydown', (event) => {
+            //   if (event.key === 'Enter') {
+            //     // Clear the timeout
+            //     // clearTimeout(popupTimeout);
+            //     // Hide the popup
+            //     hidePopup();
+            //     correctAnswers.splice(0, correctAnswers.length);
+            //     document.removeEventListener('keydown', nextRound);
+            //     document.removeEventListener('mousedown', nextRound);
+            //     mythCount = 0;
+            //     nextRound();
+            //     // mythCount = 0;
+            //   }
+            // });
+            const keydownHandler = (event) => {
+              if (event.key === 'Enter') {
+                  // Clear the timeout
+                  // clearTimeout(popupTimeout);
+                  // Hide the popup
+                  hidePopup();
+                  // hideOverlay();
+                  correctAnswers.splice(0, correctAnswers.length);
+
+                  // Remove the event listener
+                  document.removeEventListener('keydown', keydownHandler);
+                  document.removeEventListener('mousedown', keydownHandler);
+
+                  mythCount = 0;
+                  if (mythCounter < 21)
+                  {
+                  nextRound();
+                  }
+                  else{
+                    endGame();
+                  }
+                  // mythCount = 0;
+              }
+          };
+
+          // Add event listener
+          document.addEventListener('keydown', keydownHandler);
+
+            // document.removeEventListener('keydown', nextRound);
+            // document.removeEventListener('mousedown', nextRound);
+            // correctAnswers=[];
+            // mythCount = 0;
+            // setNewRound = true;
+           
+    }
+
+    noStroke();
+    fill(0);
+    text("Score:", scoreTextX, scoreTextY);
+    text(score, scoreX, scoreY);
+
+    for (let bub of bubs) {
+      if (!gamePaused) {
+        bub.update();
+      }
+      bub.display();
+      
+      bub.burst();
+    }
+  }
+
+  function mousePressed() {
+    mp = true;
+    // console.log('mouse pressed');
+  }
+  function keyPressed() {
+  // Use arrow keys to navigate bubbles
+ 
+  if (keyCode === LEFT_ARROW || key === 'a') {
+    selectedBubbleIndex = (selectedBubbleIndex - 1 + bubbleCount) % bubbleCount;
+    // console.log('selectedBubbleIndex',selectedBubbleIndex);
+  } else if (keyCode === RIGHT_ARROW || key === 'd') {
+    selectedBubbleIndex = (selectedBubbleIndex + 1) % bubbleCount;
+    // console.log('selectedBubbleIndex',selectedBubbleIndex);
+  }
+  
+  // Use spacebar or Enter key to burst the selected bubble
+  if (keyCode === ENTER || keyCode === 32) {
+    // console.log('Enter pressed');
+    bubs[selectedBubbleIndex].burstKeyAccessible();
+  }
+}
+
+  function timeIt() {
+    if (!gamePaused) {
+      if (timerValue > 0) {
+        timerValue--;
+      }
+    }
+  }
+
+  class Bubble {
+    constructor(tempX = 200, tempY = 200, tempSize = 70, tempColor = 0, textType = 'myth') {
+      this.x = tempX;
+      this.y = tempY;
+      // this.size = tempSize;
+      this.color = tempColor;
+      this.alive = true;
+      this.textType = textType;
+      if (textType == 'myth') {
+        this.text = myths[mythCounter];
+        // console.log('inside obj',this.text);
+        // console.log(mythCounter);
+        // console.log(myths);
+        mythCounter++;
+        correctAnswers.push(this.text);
+        this.explainText = justifications[mythCounter];
+      }
+      else {
+        this.text = facts[Math.floor(Math.random() * facts.length)];
+        this.explainText = explanations[Math.floor(Math.random() * facts.length)];
+      }
+      this.size = this.calculateBubbleSize();
+      if (windowWidth < windowHeight) {
+        // Portrait mode
+        this.xSpeed = random(1, 3); // Randomize horizontal speed
+        this.ySpeed = 0; // Bubbles don't move vertically
+        rotateA = 180;
+      } else {
+        // Landscape mode
+        this.xSpeed = 0; // Bubbles don't move horizontally
+        this.ySpeed = random(-3, -1); // Randomize vertical speed
+        rotateA = 0;
+      }
+      // console.log('bub create text',this.text);
+    }
+
+    display() {
+      if (this.alive) {
+        noFill();
+        texture(bubbleTexture);
+       
+        ellipse(this.x, this.y, this.size);
+        if (bubs[selectedBubbleIndex] === this) {
+          stroke(0, 0, 255); // blue border color
+          strokeWeight(3); // Border thickness
+          noFill(); // No fill inside the bubble
+          ellipse(this.x, this.y, this.size + 10); // Draw the border around the bubble
+        }
+        strokeWeight(0);
+      }
+        // Adjust text orientation based on screen size
+        if (windowWidth > windowHeight) {
+          // Portrait mode
+          textSize(15);
+          textAlign(CENTER, TOP);
+          fill(2);
+          strokeWeight(0);
+          textWrap(WORD);
+          text(this.text, this.x - (this.size / 2.5), this.y - (this.size / 4), this.size / 1.2, this.size);
+        } else {
+          // Landscape mode
+          textSize(12); // Adjust text size for landscape mode
+          textAlign(CENTER);
+          translate(this.x, this.y);
+          // txt.html(this.text);
+          // txt.position((this.size/2), 20);
+          rotate(0); // Rotate text by 90 degrees
+          fill(2);
+          strokeWeight(0);
+          textWrap(WORD);
+          text(this.text, -((this.size/2)-20), -20, this.size / 1.2, this.size); // Display text vertically
+          rotate(-0); // Reset rotation
+          translate(-this.x, -this.y);
+        }
+
+      
+    }
+
+    update() {
+      // this.y = this.y + random(-1, -0.1);
+      this.x += this.xSpeed;
+      this.y += this.ySpeed;
+      // console.log(this.y);
+      if (windowWidth > windowHeight) {
+        if(this.y <= (-height/2) + 400)
+        {
+          console.log('out of scope!!',this.y);
+          this.y = random(10, 500);
+        }
+      }
+      else{
+        if(this.x >= width/2)
+        {
+          // console.log('out of scope!!');
+          this.x = random(-200,-100);
+        }
+
+      }
+    }
+
+    burstKeyAccessible(){
+      if (correctAnswers.includes(this.text)) {
+          let index = correctAnswers.indexOf(this.text);
+          let index2 = myths.indexOf(this.text);
+          if (index !== -1) {
+            correctAnswers.splice(index, 1);
+            // myths.splice(index2, 1);
+          }
+          // console.log(correctAnswers);
+          this.alive = false;
+          this.x = 1000000;
+          this.y = 1000000;
+          score++;
+          success.play();
+        }
+        else {
+          // console.log('hi');
+          if (correctAnswers.length != 0) {
+            $('.generic-popup').removeClass('d-none');
+            $('#title').text('Correct');
+            $('#message').text(this.explainText);
+            restartRound = 1;
+            gamePaused = true;
+            function hidePopup() {
+              // Hide the popup
+              $('.generic-popup').addClass('d-none');
+              gamePaused = false; // Resume the game
+            }
+            // Set a timeout to hide the popup after 10 seconds
+            const popupTimeout = setTimeout(hidePopup, 10000);
+            document.addEventListener('mousedown', () => {
+              // Clear the timeout
+              clearTimeout(popupTimeout);
+              // Hide the popup
+              hidePopup();
+              // hideOverlay();
+
+            });
+            document.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter') {
+                // Clear the timeout
+                clearTimeout(popupTimeout);
+                // Hide the popup
+                hidePopup();
+                // hideOverlay();
+              }
+            });
+          }
+        }
+
+        
+    }
+
+    burst() {
+      setNewRound = true;
+      // console.log('burst function entered');
+      // console.log(correctAnswers);
+      // console.log(setNewRound);
+      let pMX = (pmouseX - width / 2); //WEBGL canvas starts at -width/2. -height/2
+      let pMY = (pmouseY - height / 2);
+      let pD = dist(pMX, pMY, this.x, this.y);
+
+      let bubbleWasClicked = pD < this.size / 2;
+      setNewRound = false;
+      if (mouseIsPressed && bubbleWasClicked) {
+        
+        // console.log('correctAnswers.length',correctAnswers.length);  
+        if (correctAnswers.includes(this.text)) {
+          let index = correctAnswers.indexOf(this.text);
+          let index2 = myths.indexOf(this.text);
+          if (index !== -1) {
+            correctAnswers.splice(index, 1);
+            // myths.splice(index2, 1);
+            justifications.splice(index2,1);
+          }
+          // console.log(correctAnswers);
+          if(correctAnswers.length==0)
+          {
+            setNewRound = false;
+          }
+          this.alive = false;
+          this.x = 1000000;
+          this.y = 1000000;
+          score++;
+          success.play();
+          $('.generic-popup').removeClass('d-none');
+          $('#title').text('Correct!');
+          $('#message').text(this.explainText);
+         
+          gamePaused = true;
+          function hidePopup() {
+              // Hide the popup
+              $('.generic-popup').addClass('d-none');
+              gamePaused = false; // Resume the game
+            }
+            // Set a timeout to hide the popup after 10 seconds
+            const popupTimeout = setTimeout(hidePopup, 5000);
+            document.addEventListener('mousedown', () => {
+              // Clear the timeout
+              clearTimeout(popupTimeout);
+              // Hide the popup
+              hidePopup();
+              // hideOverlay();
+
+            });
+            // document.addEventListener('keydown', (event) => {
+            //   if (event.key === 'Enter') {
+            //     // Clear the timeout
+            //     clearTimeout(popupTimeout);
+            //     // Hide the popup
+            //     hidePopup();
+            //   }
+            // });
+        }
+        else {
+          // console.log('hi');
+          if (correctAnswers.length != 0) {
+            $('.generic-popup').removeClass('d-none');
+            $('#title').text('Incorrect!');
+            $('#message').text(this.explainText);
+           
+            fail.play();
+            restartRound = 1;
+            gamePaused = true;
+            function hidePopup() {
+              // Hide the popup
+              $('.generic-popup').addClass('d-none');
+              gamePaused = false; // Resume the game
+            }
+            // Set a timeout to hide the popup after 10 seconds
+            const popupTimeout = setTimeout(hidePopup, 100000);
+            document.addEventListener('mousedown', () => {
+              // Clear the timeout
+              clearTimeout(popupTimeout);
+              // Hide the popup
+              hidePopup();
+
+            });
+            document.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter') {
+                // Clear the timeout
+                clearTimeout(popupTimeout);
+                // Hide the popup
+                hidePopup();
+                // hideOverlay();
+              }
+            });
+          }
+        }
+        if (correctAnswers.length == 0 ) {
+          // console.log('in if cond for next round func');
+          setNewRound = true;
+          // console.log('-1');
+          mythCount = 0;
+          // mythLim ++;
+          // bubs=[];
+          // console.log('1');
+          // createBubbles();
+          // console.log('2');
+          document.addEventListener('keydown', nextRound);
+          document.addEventListener('mousedown', nextRound);
+          if (mythCounter < 21)
+          {
+          nextRound();
+          }
+          else{
+            endGame();
+          }
+          // setTimeout(1000);
+          // console.log('3');
+        }
+        else{
+          setNewRound = false;
+        }
+      }
+
+
+    }
+
+    calculateBubbleSize() {
+      // Calculate bubble size based on text length
+      // if (!this.text) return 0;
+      console.log(this.text);
+      console.log(this.textType);
+      console.log(myths);
+      let trimmedText = this.text.trim();
+      // console.log(trimmedText);
+      let maxLength = 65; // Maximum characters before increasing bubble size
+      let defaultSize = 150;
+      let newSize = defaultSize;
+      // console.log(this.text.length,maxLength);
+      if (trimmedText.length > maxLength) {
+        // console.log('text longer');
+        newSize = map(trimmedText.length, maxLength, trimmedText.length * 2, defaultSize, defaultSize * 3);
+      }
+      // console.log(newSize);
+
+      return newSize;
+    }
+  }
+
+</script>
+{% endblock %}

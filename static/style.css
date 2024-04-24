@@ -1,0 +1,45 @@
+body{
+    padding:70px;
+}
+
+.primary-color{
+    background-color: #9149e5;
+}
+
+.navbar a{
+    color:white;
+}
+
+
+.primary-font{
+    font-family: "Source Sans 3", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
+  }
+
+.primary-font-color{
+    color: #9149e5;
+}
+
+.secondary-font-color{
+    color:white;
+}
+
+.s1 {
+    font-size: 3.125rem;
+}
+
+.s2{
+    font-size: 1.5rem
+}
+
+.btn:hover{
+    background-color: #9149e5 !important;
+    color: white !important;
+}
+
+.puzzle-card:hover{
+    background-color: white;
+}
+

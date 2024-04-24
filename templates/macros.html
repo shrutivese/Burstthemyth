@@ -1,0 +1,13 @@
+{% macro puzzle_card(title,text,btnname) %}
+<div class="card  puzzle-card" style="height: 18rem;border-color:#9149e5;">
+    <div class="card-body" id="parent-text">
+      <h5 class="card-title text-center primary-font">{{title}}</h5>
+      <p class="card-text text-center primary-font px-4">{{text}}</p>
+      <div class="d-flex align-items-center justify-content-center">
+      <button type="button" data-bs-toggle="modal" data-bs-target="#gameform" id = "{{btnname}}" name="game" class="btn text-center primary-font px-4 py-4" style="color:#9149e5;" value="{{title}}">START</button>
+      <button type="submit" name="learn" class="btn text-center primary-font px-4 py-4" style="color:#9149e5;" value="{{title}}">READ ABOUT ACCESSIBILITY</button>
+    </div>
+    </div>
+   
+  </div>
+{% endmacro %}
